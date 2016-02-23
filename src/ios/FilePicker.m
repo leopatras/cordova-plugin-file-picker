@@ -10,7 +10,12 @@
 @implementation FilePicker
 
 - (void)deviceSupported:(CDVInvokedUrlCommand*)command {
-    BOOL supported = NSClassFromString(@"UIDocumentPickerViewController");
+    BOOL supported = NO;
+
+    if (NSClassFromString(@"UIDocumentPickerViewController")) {
+        supported = YES;
+    }
+    
     [self.commandDelegate sendPluginResult:[CDVPluginResult
                                             resultWithStatus:CDVCommandStatus_OK
                                             messageAsBool:supported]
@@ -121,8 +126,16 @@
     NSString* fileNameWithType = [urlString substringFromIndex:[urlString rangeOfString:@"/" options:NSBackwardsSearch].location + 1];
     NSInteger fileTypeStartIndex = [fileNameWithType rangeOfString:@"." options:NSBackwardsSearch].location;
     
-    NSString* fileName = [[fileNameWithType substringToIndex:fileTypeStartIndex] stringByReplacingOccurrencesOfString:@"%20" withString:@" "];
-    NSString* fileType = [fileNameWithType substringFromIndex:fileTypeStartIndex+1];
+    NSString* fileName;
+    NSString* fileType;
+    
+    if (fileTypeStartIndex <= [fileNameWithType length]) {
+        fileName = [[fileNameWithType substringToIndex:fileTypeStartIndex] stringByReplacingOccurrencesOfString:@"%20" withString:@" "];
+        fileType = [fileNameWithType substringFromIndex:fileTypeStartIndex+1];
+    } else {
+        fileName = [fileNameWithType stringByReplacingOccurrencesOfString:@"%20" withString:@" "];
+        fileType = @"";
+    }
     
     return [NSArray arrayWithObjects:[data base64EncodedStringWithOptions:0], fileName, fileType, nil];
 }
