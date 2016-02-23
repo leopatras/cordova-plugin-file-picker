@@ -1,25 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
-        id="com.jcesarmobile.filepicker"
-        version="1.2.1">
 
-  <name>File Picker</name>
-  <author>jcesarmobile</author>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    id="com.wodify.cordova.plugin.file-picker"
+    version="0.0.1">
 
-  <description>
-    This plugin makes possible to pick files from iCloud or other document providers
-  </description>
+    <name>Cordova-Plugin-Instabug</name>
 
-  <license>MIT</license>
+    <description>Cordova plugin for picking files.</description>
 
-  <js-module src="www/FilePicker.js" name="FilePicker">
-    <clobbers target="FilePicker"/>
-  </js-module>
+    <repo>https://github.com/elizabethrego/cordova-plugin-instabug</repo>
 
-  <engines>
-    <engine name="cordova" version="&gt;=3.0.0"/>
+    <keyword>file picker, files, document picker</keyword>
+
+    <license>MIT</license>
+
+    <author>Elizabeth Rego, jcesarmobile</author>
+
+    <!-- cordova -->
+    <engines>
+    <engine name="cordova" version=">=3.0.0"/>
   </engines>
 
+    <!-- js -->
+  <js-module src="www/file-picker.js" name="FilePicker">
+    <clobbers target="cordova.plugins.filePicker" />
+  </js-module>
+
+    <!-- ios -->
   <platform name="ios">
     <config-file target="config.xml" parent="/*">
       <feature name="FilePicker">
@@ -33,4 +41,5 @@
     <hook type="after_plugin_install" src="src/ios/hooks/prerequisites.js"/>
     <hook type="after_plugin_install" src="src/ios/hooks/install_entitlements.js"/>
   </platform>
+
 </plugin>

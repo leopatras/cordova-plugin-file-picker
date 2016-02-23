@@ -1,9 +1,9 @@
-//
-//  FilePicker.h
-//
-//  Created by @jcesarmobile
-//
-//
+/*
+ * FilePicker.h
+ *
+ * Created by @jcesarmobile
+ * Edited by @elizabethrego
+ */
 
 #import <Foundation/Foundation.h>
 #import <Cordova/CDVPlugin.h>
@@ -12,9 +12,9 @@
 
 @property (strong, nonatomic) CDVPluginResult * pluginResult;
 @property (strong, nonatomic) CDVInvokedUrlCommand * command;
+@property (nonatomic) BOOL toBinary;
 
-- (void)isAvailable:(CDVInvokedUrlCommand*)command;
+- (void)deviceSupported:(CDVInvokedUrlCommand*)command;
 - (void)pickFile:(CDVInvokedUrlCommand*)command;
-
 
 @end

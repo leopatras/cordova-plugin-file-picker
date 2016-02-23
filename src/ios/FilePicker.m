@@ -1,25 +1,30 @@
-//
-//  FilePicker.m
-//
-//  Created by @jcesarmobile
-//
-//
+/*
+ * FilePicker.m
+ *
+ * Created by @jcesarmobile
+ * Edited by @elizabethrego
+ */
 
 #import "FilePicker.h"
 
 @implementation FilePicker
 
-- (void)isAvailable:(CDVInvokedUrlCommand*)command {
+- (void)deviceSupported:(CDVInvokedUrlCommand*)command {
     BOOL supported = NSClassFromString(@"UIDocumentPickerViewController");
-    [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:supported] callbackId:command.callbackId];
+    [self.commandDelegate sendPluginResult:[CDVPluginResult
+                                            resultWithStatus:CDVCommandStatus_OK
+                                            messageAsBool:supported]
+                                callbackId:command.callbackId];
 }
 
 - (void)pickFile:(CDVInvokedUrlCommand*)command {
 
     self.command = command;
     id UTIs = [command.arguments objectAtIndex:0];
+    self.returnWithDetail = [[command.arguments objectAtIndex:1] boolValue];
     BOOL supported = YES;
-    NSArray * UTIsArray = nil;
+    
+    NSArray* UTIsArray = nil;
     if ([UTIs isEqual:[NSNull null]]) {
         UTIsArray =  @[@"public.data"];
     } else if ([UTIs isKindOfClass:[NSString class]]){
@@ -28,24 +33,28 @@
         UTIsArray = UTIs;
     } else {
         supported = NO;
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"not supported"] callbackId:self.command.callbackId];
     }
     
     if (!NSClassFromString(@"UIDocumentPickerViewController")) {
+        // Cannot show picker
         supported = NO;
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"your device can't show the file picker"] callbackId:self.command.callbackId];
     }
 
     if (supported) {
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
         [self.pluginResult setKeepCallbackAsBool:YES];
         [self displayDocumentPicker:UTIsArray];
+    } else {
+        [self.commandDelegate sendPluginResult:[CDVPluginResult
+                                                resultWithStatus:CDVCommandStatus_ERROR
+                                                messageAsString:@"Device not supported."]
+                                    callbackId:self.command.callbackId];
     }
     
 }
 
 #pragma mark - UIDocumentMenuDelegate
--(void)documentMenu:(UIDocumentMenuViewController *)documentMenu didPickDocumentPicker:(UIDocumentPickerViewController *)documentPicker {
+-(void)documentMenu:(UIDocumentMenuViewController*)documentMenu didPickDocumentPicker:(UIDocumentPickerViewController*)documentPicker {
     
     documentPicker.delegate = self;
     documentPicker.modalPresentationStyle = UIModalPresentationFullScreen;
@@ -53,7 +62,7 @@
     
 }
 
--(void)documentMenuWasCancelled:(UIDocumentMenuViewController *)documentMenu {
+-(void)documentMenuWasCancelled:(UIDocumentMenuViewController*)documentMenu {
     
     self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"canceled"];
     [self.pluginResult setKeepCallbackAsBool:NO];
@@ -62,14 +71,21 @@
 }
 
 #pragma mark - UIDocumentPickerDelegate
-- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentAtURL:(NSURL *)url {
+- (void)documentPicker:(UIDocumentPickerViewController*)controller didPickDocumentAtURL:(NSURL*)url {
     
-    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[url path]];
+    if (self.returnWithDetail) {
+        NSArray* details = [self getFileDetails:url];
+        
+        self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:details];
+    } else {
+        self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[url path]];
+    }
+    
     [self.pluginResult setKeepCallbackAsBool:NO];
     [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
     
 }
-- (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
+- (void)documentPickerWasCancelled:(UIDocumentPickerViewController*)controller {
     
     self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"canceled"];
     [self.pluginResult setKeepCallbackAsBool:NO];
@@ -77,7 +93,7 @@
     
 }
 
-- (void)displayDocumentPicker:(NSArray *)UTIs {
+- (void)displayDocumentPicker:(NSArray*)UTIs {
     
     UIDocumentMenuViewController *importMenu = [[UIDocumentMenuViewController alloc] initWithDocumentTypes:UTIs inMode:UIDocumentPickerModeImport];
     importMenu.delegate = self;
@@ -86,4 +102,28 @@
     
 }
 
+#pragma mark - Utils
+- (NSArray*)getFileDetails:(NSURL*)url {
+    // see: http://stackoverflow.com/questions/25520453/ios8-uidocumentpickerviewcontroller-get-nsdata
+    [url startAccessingSecurityScopedResource];
+    
+    __block NSData *data;
+    
+    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
+    NSError *error;
+    [coordinator coordinateReadingItemAtURL:url options:0 error:&error byAccessor:^(NSURL *newURL) {
+        data = [NSData dataWithContentsOfURL:url];
+    }];
+    
+    [url stopAccessingSecurityScopedResource];
+    
+    NSString* urlString =[url absoluteString];
+    NSString* fileNameWithType = [urlString substringFromIndex:[urlString rangeOfString:@"/" options:NSBackwardsSearch].location];
+    NSInteger fileTypeStartIndex = [fileNameWithType rangeOfString:@"." options:NSBackwardsSearch].location;
+    
+    NSString* fileName = [fileNameWithType substringToIndex:fileTypeStartIndex];
+    NSString* fileType = [fileNameWithType substringFromIndex:fileTypeStartIndex+1];
+    
+    return [NSArray arrayWithObjects:[data base64EncodedStringWithOptions:0], fileName, fileType, nil];
+}
 @end
