@@ -18,7 +18,7 @@
 }
 
 - (void)pickFile:(CDVInvokedUrlCommand*)command {
-
+    
     self.command = command;
     id UTIs = [command.arguments objectAtIndex:0];
     self.returnWithDetail = [[command.arguments objectAtIndex:1] boolValue];
@@ -39,7 +39,7 @@
         // Cannot show picker
         supported = NO;
     }
-
+    
     if (supported) {
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
         [self.pluginResult setKeepCallbackAsBool:YES];
@@ -74,7 +74,7 @@
 - (void)documentPicker:(UIDocumentPickerViewController*)controller didPickDocumentAtURL:(NSURL*)url {
     
     if (self.returnWithDetail) {
-        NSArray* details = [self getFileDetails:url];
+        NSArray* details = [self fileDetailsFromUrl:url];
         
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:details];
     } else {
@@ -103,7 +103,7 @@
 }
 
 #pragma mark - Utils
-- (NSArray*)getFileDetails:(NSURL*)url {
+- (NSArray*)fileDetailsFromUrl:(NSURL*)url {
     // see: http://stackoverflow.com/questions/25520453/ios8-uidocumentpickerviewcontroller-get-nsdata
     [url startAccessingSecurityScopedResource];
     
@@ -117,11 +117,11 @@
     
     [url stopAccessingSecurityScopedResource];
     
-    NSString* urlString =[url absoluteString];
-    NSString* fileNameWithType = [urlString substringFromIndex:[urlString rangeOfString:@"/" options:NSBackwardsSearch].location];
+    NSString* urlString = [url absoluteString];
+    NSString* fileNameWithType = [urlString substringFromIndex:[urlString rangeOfString:@"/" options:NSBackwardsSearch].location + 1];
     NSInteger fileTypeStartIndex = [fileNameWithType rangeOfString:@"." options:NSBackwardsSearch].location;
     
-    NSString* fileName = [fileNameWithType substringToIndex:fileTypeStartIndex];
+    NSString* fileName = [[fileNameWithType substringToIndex:fileTypeStartIndex] stringByReplacingOccurrencesOfString:@"%20" withString:@" "];
     NSString* fileType = [fileNameWithType substringFromIndex:fileTypeStartIndex+1];
     
     return [NSArray arrayWithObjects:[data base64EncodedStringWithOptions:0], fileName, fileType, nil];
