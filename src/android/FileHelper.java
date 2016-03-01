@@ -183,21 +183,6 @@ public class FileHelper {
         return result;
     }
 
-    public static String getRealPathFromExternal(Uri uri, Context context) {
-        String [] proj = { MediaStore.Files.FileColumns.DATA };
-        String result = null;
-
-        try {
-            Cursor cursor = context.getContentResolver().query(uri, proj, null, null, null);
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA);
-            cursor.moveToFirst();
-            result = cursor.getString(column_index);
-        } catch (Exception e) {
-            result = null;
-        }
-        return result;
-    }
-
     /**
      * Get the value of the data column for this Uri. This is useful for
      * MediaStore Uris, and other file-based ContentProviders.

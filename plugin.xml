@@ -35,6 +35,8 @@
           </feature>
       </config-file>
 
+      <source-file src="src/android/commons-io-2.4.jar" target-dir="libs" framework="true" />
+
       <source-file src="src/android/FilePicker.java" target-dir="src/com/wodify/cordova-plugin-file-picker" />
       <source-file src="src/android/FileHelper.java" target-dir="src/com/wodify/cordova-plugin-file-picker" />
 

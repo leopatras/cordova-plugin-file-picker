@@ -12,7 +12,7 @@
 
 @property (strong, nonatomic) CDVPluginResult * pluginResult;
 @property (strong, nonatomic) CDVInvokedUrlCommand * command;
-@property (nonatomic) BOOL toBinary;
+@property (nonatomic) BOOL returnWithDetail;
 
 - (void)deviceSupported:(CDVInvokedUrlCommand*)command;
 - (void)pickFile:(CDVInvokedUrlCommand*)command;

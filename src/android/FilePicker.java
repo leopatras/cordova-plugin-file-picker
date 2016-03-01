@@ -24,7 +24,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.lang.NullPointerException;
+import java.io.FileNotFoundException;
+import org.apache.commons.io.IOUtils;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -37,6 +39,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Base64;
+import android.provider.OpenableColumns;
+import android.database.Cursor;
 import android.util.Log;
 
 /**
@@ -111,29 +115,71 @@ public class FilePicker extends CordovaPlugin {
             return;
         }
 
+        Log.v("chromium", "URI IS: " + uri.toString());
+        Log.v("chromium", "URI PATH IS: " + uri.getPath().toString());
+
         String fileLocation = FileHelper.getRealPath(uri, this.cordova);
         Log.v("chromium", "LOCATION: " + fileLocation);
         Log.v("chromium", "URI LOCATION: " + uri.getPath().toString());
 
         if (fileLocation == null || fileLocation.length() == 0) {
-            fileLocation = FileHelper.getRealPathFromExternal(uri, this.cordova.getActivity());
-            Log.v("chromium", "NEW LOCATION: " + fileLocation);
-        }
 
-        // If you ask for video or all media type you will automatically get back a file URI
-        // and there will be no attempt to resize any returned data
-        if (returnFileWithDetails) {
-            JSONArray details = this.getFileDetails(fileLocation);
-
-            if (details != null && details.length() == 3) {
-                this.callbackContext.success(details);
+            if (returnFileWithDetails) {
+                sendOrFailFileDetails(getFileDetails(uri));
             } else {
-                this.failFile("Error parsing file from URI.");
+               this.callbackContext.success(uri.toString());
+            }
+            
+        } else {
+            if (returnFileWithDetails) {
+                sendOrFailFileDetails(getFileDetails(fileLocation));
+            } else {
+               this.callbackContext.success(fileLocation);
             }
         }
-        else {
-           this.callbackContext.success(fileLocation);
-        }
+    }
+
+    private JSONArray formatFileDetails(byte[] bytesOfFile, String fileName) {
+        if (fileName != null && fileName.length() > 0) {
+            String base64EncodedString = getBase64EncodedStringFromBytes(bytesOfFile);
+            String[] nameAndType = getFileNameAndType(fileName);
+
+            try {
+                return new JSONArray(new String[] { base64EncodedString, nameAndType[0], nameAndType[1] });
+            } catch (JSONException e) {
+                return null;
+            }
+        } else return null;
+    }
+
+    private JSONArray getFileDetails(Uri uri) {
+        Cursor cursor = this.cordova.getActivity().getContentResolver().query(uri, null, null, null, null);
+        
+        if (cursor != null && cursor.moveToFirst()) {
+            String name = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+
+            cursor.close();
+
+            try {
+                InputStream is = this.cordova.getActivity().getContentResolver().openInputStream(uri);
+                if (is != null) {
+                    Log.v("chromium", "InputStream not null!");
+                    try {
+                        byte[] bytesOfFile = IOUtils.toByteArray(is);
+                        return formatFileDetails(bytesOfFile, name);
+                    } catch (IOException e) {
+                        Log.v("chromium", "EXCEPTION");
+                        return null;
+                    } catch (NullPointerException e) {
+                        Log.v("chromium", "EXCEPTION");
+                        return null;
+                    }
+                } else return null;
+            } catch (FileNotFoundException e) {
+                Log.v("chromium", "EXCEPTION");
+                return null;
+            }
+        } else return null;
     }
 
     private JSONArray getFileDetails(String path) {
@@ -141,14 +187,6 @@ public class FilePicker extends CordovaPlugin {
 
         file = new File(path);
         Log.v("chromium", path);
-        /*try {
-            file = new File(uri.getPath());
-        } catch (URISyntaxException e) {
-            file = null;
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace;
-            file = null;
-        }*/
 
         if (file != null) {
             Log.v("chromium", "File not null");
@@ -156,37 +194,49 @@ public class FilePicker extends CordovaPlugin {
 
             try {
                 bytesOfFile = loadFile(file);
+                return formatFileDetails(bytesOfFile, file.getName());
             } catch (IOException e) {
-                bytesOfFile = null;
-            }
-
-            if (bytesOfFile != null && bytesOfFile.length > 0) {
-                Log.v("chromium", "Bytes not null");
-                String[] details = new String[3];
-
-                Log.v("chromium", "encoding once...");
-                byte[] base64EncodedFile = Base64.encode(bytesOfFile, Base64.NO_WRAP);
-                Log.v("chromium", "encoding twice...");
-                details[0] = new String(base64EncodedFile);
-                Log.v("chromium", "ENCODED LENGTH: " + details[0].length());
-
-                String name = file.getName();
-
-                int pos = name.lastIndexOf(".");
-                if (pos > 0) {
-                    details[1] = name.substring(0, pos);
-                    details[2] = name.substring(pos + 1);
-                } else {
-                    details[1] = name;
-                    details[2] = "";
-                }
-
-                try {
-                    return new JSONArray(details);
-                } catch (JSONException e) {}
+                Log.v("chromium", "EXCEPTION");
+                return null;
             }
         }
         return null;
+    }
+
+    private String getBase64EncodedStringFromBytes(byte[] bytes) {
+        if (bytes != null && bytes.length > 0) {
+            Log.v("chromium", "Bytes not null");
+
+            Log.v("chromium", "encoding once...");
+            byte[] base64EncodedFile = Base64.encode(bytes, Base64.NO_WRAP);
+            Log.v("chromium", "getting encoded string...");
+            return new String(base64EncodedFile);
+        }
+        return null;
+    }
+
+    private static String[] getFileNameAndType(String nameWithType) {
+        String[] nameAndType = new String[2];
+
+        int pos = nameWithType.lastIndexOf(".");
+
+        if (pos > 0) {
+            nameAndType[0] = nameWithType.substring(0, pos);
+            nameAndType[1] = nameWithType.substring(pos + 1);
+        } else {
+            nameAndType[0] = nameWithType;
+            nameAndType[1] = "";
+        }
+
+        return nameAndType;
+    }
+
+    private void sendOrFailFileDetails(JSONArray fileDetails) {
+        if (fileDetails != null && fileDetails.length() == 3) {
+            this.callbackContext.success(fileDetails);
+        } else {
+            this.failFile("Error parsing file from URI.");
+        }
     }
 
     /**
