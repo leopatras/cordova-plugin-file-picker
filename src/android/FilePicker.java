@@ -41,26 +41,31 @@ import android.net.Uri;
 import android.util.Base64;
 import android.provider.OpenableColumns;
 import android.database.Cursor;
-import android.util.Log;
 
 /**
- * This class launches the camera view, allows the user to take a picture, closes the camera view,
- * and returns the captured image.  When the camera view is closed, the screen displayed before
- * the camera view was shown is redisplayed.
+ * This plugin allows a user to pick a file from their device.
  */
 public class FilePicker extends CordovaPlugin {
 
+    // Static flag to determine whether to return
+    // verbose details of file instead of its Uri
     private static boolean returnFileWithDetails = false;
 
+    // Reference to callbackContext so result can be
+    // sent outside of its initial scope
     public CallbackContext callbackContext;
 
     /**
-     * Executes the request and returns PluginResult.
+     * Executes the request sent from JavaScript.
      *
-     * @param action            The action to execute.
-     * @param args              JSONArry of arguments for the plugin.
-     * @param callbackContext   The callback id used when calling back into JavaScript.
-     * @return                  A PluginResult object with a status and message.
+     * @param action
+     *      The action to execute.
+     * @param args
+     *      The exec() arguments in JSON form.
+     * @param command
+     *      The callback context used when calling back into JavaScript.
+     * @return
+     *      Whether the action was valid.
      */
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         this.callbackContext = callbackContext;
@@ -78,14 +83,10 @@ public class FilePicker extends CordovaPlugin {
 
             return true;
         } else if (action.equals("deviceSupported")) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
+            callbackContext.success("true");
         }
         return false;
     }
-
-    //--------------------------------------------------------------------------
-    // LOCAL METHODS
-    //--------------------------------------------------------------------------
 
     /**
      * Pick file from device.
@@ -93,7 +94,9 @@ public class FilePicker extends CordovaPlugin {
     public void pickFile() {
         Intent intent = new Intent();
 
+        // Any type of file may be picked
         intent.setType("*/*");
+
         intent.setAction(Intent.ACTION_GET_CONTENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
@@ -103,10 +106,11 @@ public class FilePicker extends CordovaPlugin {
     }
 
     /**
-     * Applies all needed transformation to the image received from the gallery.
+     * Gets and returns data about the picked file.
      *
-     * @param destType          In which form should we return the image
-     * @param intent            An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
+     * @param intent
+     *        An Intent, which can return result data to the caller (various 
+     *        data can be attached to Intent "extras").
      */
     private void processResult(Intent intent) {
         Uri uri = intent.getData();
@@ -115,12 +119,7 @@ public class FilePicker extends CordovaPlugin {
             return;
         }
 
-        Log.v("chromium", "URI IS: " + uri.toString());
-        Log.v("chromium", "URI PATH IS: " + uri.getPath().toString());
-
         String fileLocation = FileHelper.getRealPath(uri, this.cordova);
-        Log.v("chromium", "LOCATION: " + fileLocation);
-        Log.v("chromium", "URI LOCATION: " + uri.getPath().toString());
 
         if (fileLocation == null || fileLocation.length() == 0) {
 
@@ -139,6 +138,14 @@ public class FilePicker extends CordovaPlugin {
         }
     }
 
+    /**
+     * Returns an array of the file's base 64 string representation, name, and type.
+     * 
+     * @param  bytesOfFile
+     *         Byte representation of file
+     * @param  fileName
+     *         Name of file
+     */
     private JSONArray formatFileDetails(byte[] bytesOfFile, String fileName) {
         if (fileName != null && fileName.length() > 0) {
             String base64EncodedString = getBase64EncodedStringFromBytes(bytesOfFile);
@@ -152,6 +159,12 @@ public class FilePicker extends CordovaPlugin {
         } else return null;
     }
 
+    /**
+     * Gets details of file stored externally, e.g. from Google Drive or Dropbox
+     * 
+     * @param  uri 
+     *         Uri of picked file
+     */
     private JSONArray getFileDetails(Uri uri) {
         Cursor cursor = this.cordova.getActivity().getContentResolver().query(uri, null, null, null, null);
         
@@ -163,58 +176,65 @@ public class FilePicker extends CordovaPlugin {
             try {
                 InputStream is = this.cordova.getActivity().getContentResolver().openInputStream(uri);
                 if (is != null) {
-                    Log.v("chromium", "InputStream not null!");
                     try {
                         byte[] bytesOfFile = IOUtils.toByteArray(is);
                         return formatFileDetails(bytesOfFile, name);
                     } catch (IOException e) {
-                        Log.v("chromium", "EXCEPTION");
                         return null;
                     } catch (NullPointerException e) {
-                        Log.v("chromium", "EXCEPTION");
                         return null;
                     }
                 } else return null;
             } catch (FileNotFoundException e) {
-                Log.v("chromium", "EXCEPTION");
                 return null;
             }
         } else return null;
     }
 
+    /**
+     * Gets details of file stored locally.
+     * 
+     * @param  uri 
+     *         Uri of picked file
+     */
     private JSONArray getFileDetails(String path) {
         File file;
 
         file = new File(path);
-        Log.v("chromium", path);
 
         if (file != null) {
-            Log.v("chromium", "File not null");
             byte[] bytesOfFile;
 
             try {
                 bytesOfFile = loadFile(file);
                 return formatFileDetails(bytesOfFile, file.getName());
             } catch (IOException e) {
-                Log.v("chromium", "EXCEPTION");
                 return null;
             }
         }
         return null;
     }
 
+    /**
+     * Converts byte array to base 64 representation of string.
+     * 
+     * @param  bytes
+     *         Byte representation of file
+     */
     private String getBase64EncodedStringFromBytes(byte[] bytes) {
         if (bytes != null && bytes.length > 0) {
-            Log.v("chromium", "Bytes not null");
-
-            Log.v("chromium", "encoding once...");
             byte[] base64EncodedFile = Base64.encode(bytes, Base64.NO_WRAP);
-            Log.v("chromium", "getting encoded string...");
             return new String(base64EncodedFile);
         }
         return null;
     }
 
+    /**
+     * Parses file name with extension into two separate strings
+     * 
+     * @param  nameWithType
+     *         File name with extension (type)
+     */
     private static String[] getFileNameAndType(String nameWithType) {
         String[] nameAndType = new String[2];
 
@@ -231,6 +251,13 @@ public class FilePicker extends CordovaPlugin {
         return nameAndType;
     }
 
+    /**
+     * Calls back to JavaScript side with file details if valid,
+     * or fails the file.
+     * 
+     * @param fileDetails
+     *        Verbose details of file
+     */
     private void sendOrFailFileDetails(JSONArray fileDetails) {
         if (fileDetails != null && fileDetails.length() == 3) {
             this.callbackContext.success(fileDetails);
@@ -271,12 +298,17 @@ public class FilePicker extends CordovaPlugin {
     }
 
     /**
-     * Called when the camera view exits.
+     * Called when the file picker view exits.
      *
-     * @param requestCode       The request code originally supplied to startActivityForResult(),
-     *                          allowing you to identify who this result came from.
-     * @param resultCode        The integer result code returned by the child activity through its setResult().
-     * @param intent            An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
+     * @param requestCode
+     *        The request code originally supplied to startActivityForResult(),
+     *        allowing you to identify who this result came from.
+     * @param resultCode
+     *        The integer result code returned by the child activity through 
+     *        its setResult().
+     * @param intent
+     *        An Intent, which can return result data to the caller (various
+     *         data can be attached to Intent "extras").
      */
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (resultCode == Activity.RESULT_OK && intent != null) {
@@ -296,7 +328,7 @@ public class FilePicker extends CordovaPlugin {
     }
 
     /**
-     * Send error message to JavaScript.
+     * Calls back to JavaScript side with error message.
      *
      * @param err
      */

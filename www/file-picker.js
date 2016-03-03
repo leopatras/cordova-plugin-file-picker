@@ -3,7 +3,7 @@ var exec = require('cordova/exec');
 var FilePicker = function () {};
 
 FilePicker.deviceSupported = function (success) {
-    exec(success, null, 'FilePicker', 'deviceSupported');
+    exec(success, null, 'FilePicker', 'deviceSupported', []);
 };
 
 FilePicker.pickFile = function (success, error, types, withDetail, maxLengthInBytes) {
