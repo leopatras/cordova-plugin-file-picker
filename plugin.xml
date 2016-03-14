@@ -5,7 +5,7 @@
     id="com.wodify.cordova.plugin.file-picker"
     version="0.0.1">
 
-    <name>Cordova-Plugin-Instabug</name>
+    <name>Cordova-Plugin-File-Picker</name>
 
     <description>Cordova plugin for picking files.</description>
 
