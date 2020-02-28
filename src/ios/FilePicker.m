@@ -86,18 +86,15 @@
     
 }
 
-#pragma mark - UIDocumentPickerDelegate
 /**
  * Retrieves URL of picked document and sends it off for processing if
  * necessary or returns it.
  * 
- * @param {UIDocumentPickerViewController*} controller
- *        Delegate for document picker
  * @param {NSURL*} url
  *        URL of the picked document
  */
-- (void)documentPicker:(UIDocumentPickerViewController*)controller didPickDocumentAtURL:(NSURL*)url {
-    
+- (void)didPickDocumentAtURL:(NSURL*)url
+{
     if (self.returnWithDetail) {
         NSArray* details = [self fileDetailsFromUrl:url];
         
@@ -109,6 +106,16 @@
     [self.pluginResult setKeepCallbackAsBool:NO];
     [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
     
+}
+
+#pragma mark - UIDocumentPickerDelegate
+-(void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls
+{
+    if (urls.count>0) {
+        [self didPickDocumentAtURL:urls[0]];
+    } else {
+        [self documentPickerWasCancelled:controller];
+    }
 }
 
 /**
@@ -131,10 +138,16 @@
  *        types that are allowed to be picked
  */
 - (void)displayDocumentPicker:(NSArray*)UTIs {
-    UIDocumentPickerViewController *importMenu = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:UTIs inMode:UIDocumentPickerModeOpen];
+    UIDocumentPickerViewController *importMenu = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:UTIs inMode:UIDocumentPickerModeImport];
     importMenu.delegate = self;
     importMenu.popoverPresentationController.sourceView = self.viewController.view;
-    [self.viewController presentViewController:importMenu animated:YES completion:nil];
+    if (@available(iOS 13.0, *)) {
+      //this prevents "swipe to close"
+      importMenu.modalInPresentation=TRUE;
+    }
+    //importMenu.allowsMultipleSelection=false;
+    UIViewController* root=self.viewController;
+    [root presentViewController:importMenu animated:TRUE completion:nil];
 }
 
 #pragma mark - Utils
