@@ -86,26 +86,6 @@
     
 }
 
-#pragma mark - UIDocumentMenuDelegate
-/**
- * Presents the document menu (allows to pick location from where
- * document will be picked).
- */
--(void)documentMenu:(UIDocumentMenuViewController*)documentMenu didPickDocumentPicker:(UIDocumentPickerViewController*)documentPicker {
-    documentPicker.delegate = self;
-    documentPicker.modalPresentationStyle = UIModalPresentationFullScreen;
-    [self.viewController presentViewController:documentPicker animated:YES completion:nil];
-}
-
-/**
- * Notifies when the document menu was exited without location selection.
- */
--(void)documentMenuWasCancelled:(UIDocumentMenuViewController*)documentMenu {
-    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"canceled"];
-    [self.pluginResult setKeepCallbackAsBool:NO];
-    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
-}
-
 #pragma mark - UIDocumentPickerDelegate
 /**
  * Retrieves URL of picked document and sends it off for processing if
@@ -151,7 +131,7 @@
  *        types that are allowed to be picked
  */
 - (void)displayDocumentPicker:(NSArray*)UTIs {
-    UIDocumentMenuViewController *importMenu = [[UIDocumentMenuViewController alloc] initWithDocumentTypes:UTIs inMode:UIDocumentPickerModeImport];
+    UIDocumentPickerViewController *importMenu = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:UTIs inMode:UIDocumentPickerModeOpen];
     importMenu.delegate = self;
     importMenu.popoverPresentationController.sourceView = self.viewController.view;
     [self.viewController presentViewController:importMenu animated:YES completion:nil];
