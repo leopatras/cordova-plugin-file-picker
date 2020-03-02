@@ -1,9 +1,7 @@
 This is a Genero cordova demo for the IOS file picker.
 Important!
 You need to have a *specific* IOS profile for this project with an explicit app id (com.fourjs.filepicker).
-Profiles having wildcards(*) do not work for the moment due to a flaw in gmibuildtool.
-Also simulator builds for IOS13 simulators do not allow selecting a file in the picker: this is due to missing code sign for the simulator: to be improved.
-Working: IOS 12 simulator builds and device builds.
+Profiles having wildcards(*) do not work for the moment due to a flaw in gmibuildtool. This will be fixed in GMI1.40.07
 
 For the device 
 % make IDENTITY=<your_signing_identy> PROVISIONING_PROFILE=<your_profile> gmi.install
